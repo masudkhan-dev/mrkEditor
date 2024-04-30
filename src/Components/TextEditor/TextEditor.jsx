@@ -13,8 +13,8 @@ import {
 } from "react-icons/fa";
 import { IoMdColorWand, IoIosColorPalette } from "react-icons/io";
 import { SketchPicker } from "react-color";
-import { MdBorderColor, MdEmojiEmotions } from "react-icons/md";
-import EmojiPicker from "emoji-picker-react";
+import { MdBorderColor } from "react-icons/md";
+import { FaTableCells } from "react-icons/fa6";
 
 const TextEditor = () => {
   // variables
@@ -28,6 +28,7 @@ const TextEditor = () => {
     code: false,
   });
 
+  const editorRef = useRef(null);
   const [quoteClicked, setQuoteClicked] = useState(false);
   const [selectedColor, setSelectedColor] = useState("#000000");
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -36,17 +37,14 @@ const TextEditor = () => {
     useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [selectedFontSize, setSelectedFontSize] = useState("normal");
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [selectedEmoji, setSelectedEmoji] = useState(null);
-
-  const editorRef = useRef(null);
+  const [isCodeClicked, setIsCodeClicked] = useState(false);
+  const [showTableDialog, setShowTableDialog] = useState(false);
+  const [numRows, setNumRows] = useState(2);
+  const [numCols, setNumCols] = useState(2);
 
   const toggleStyles = (style) => {
-    const selection = window.getSelection();
-
     if (style === "code") {
-      document.execCommand(style);
-      updateSelectedStyles();
+      setIsCodeClicked(!isCodeClicked);
     } else {
       document.execCommand(style, false, null);
     }
@@ -164,66 +162,35 @@ const TextEditor = () => {
     setQuoteClicked(true);
   };
 
-  //code
+  // code
   const handleCode = () => {
     const selection = window.getSelection();
     const selectedText = selection.toString();
-    const codeNode = document.createElement("aside");
-    codeNode.classList.add(
-      "bg-black",
-      "text-white",
-      "p-6",
-      "rounded-lg",
-      "w-full",
-      "max-w-full",
-      "font-mono"
-    );
-
-    const flexContainer = document.createElement("div");
-    flexContainer.classList.add("flex", "justify-between", "items-center");
-
-    const circleContainer = document.createElement("div");
-    circleContainer.classList.add("flex", "space-x-2", "text-red-500");
-    const circles = ["bg-red-500", "bg-yellow-500", "bg-green-500"];
-    circles.forEach((color) => {
-      const circle = document.createElement("div");
-      circle.classList.add("w-3", "h-3", "rounded-full", color);
-      circleContainer.appendChild(circle);
-    });
-
-    const lang = document.createElement("p");
-    lang.textContent = "fish";
-    lang.classList.add("text-sm");
-
-    const commands = document.createElement("div");
-    commands.classList.add("mt-4");
-    const commandLines = [
-      {
-        text: selectedText ? selectedText : "$" + " ",
-        color: "text-green-400",
-      },
-    ];
-
-    commandLines.forEach((line) => {
-      const command = document.createElement("p");
-      command.textContent = line.text;
-      command.classList.add(line.color);
-      commands.appendChild(command);
-    });
-
-    flexContainer.appendChild(circleContainer);
-    flexContainer.appendChild(lang);
-    codeNode.appendChild(flexContainer);
-    codeNode.appendChild(commands);
 
     if (selectedText) {
+      const codeSnippet = `
+      <aside class="bg-black text-white p-6 rounded-lg w-full max-w-full font-mono">
+        <div class="flex justify-between items-center">
+          <div class="flex space-x-2 text-red-500">
+            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+          </div>
+          <p class="text-sm">bash</p>
+        </div>
+        <div class="mt-4">
+          <p class="text-green-400">$ ${selectedText}</p>
+          <p class="text-green-400">$</p>
+        </div>
+      </aside>
+    `;
+
       const range = selection.getRangeAt(0);
+      const codeNode = document.createElement("div");
+      codeNode.innerHTML = codeSnippet;
       range.deleteContents();
       range.insertNode(codeNode);
-    } else {
-      editorRef.current.appendChild(codeNode);
     }
-    setQuoteClicked(true);
   };
 
   // unordered list
@@ -454,7 +421,6 @@ const TextEditor = () => {
   };
 
   // eraser
-
   const handleEraser = () => {
     document.execCommand("removeFormat");
     setSelectedStyles({
@@ -478,21 +444,29 @@ const TextEditor = () => {
     document.execCommand("insertText", false, text);
   };
 
-  // Emoji
-  const handleEmojiSelect = (event, emojiObject) => {
-    const { emoji } = emojiObject;
-    const selection = window.getSelection();
-    const range = selection.getRangeAt(0);
-    const emojiSpan = document.createElement("span");
-    emojiSpan.textContent = emoji;
-    range.deleteContents();
-    range.insertNode(emojiSpan);
-    range.collapse(false);
-    toggleEmojiPicker();
-  };
-
-  const toggleEmojiPicker = () => {
-    setShowEmojiPicker(!showEmojiPicker);
+  // table
+  const insertTable = () => {
+    const tableHTML = `
+      <table border="1" cellpadding="5" cellspacing="0">
+        <tbody>
+          ${Array.from(
+            { length: numRows },
+            () => `
+            <tr>
+              ${Array.from(
+                { length: numCols },
+                () => `
+                <td>&nbsp;</td>
+              `
+              ).join("")}
+            </tr>
+          `
+          ).join("")}
+        </tbody>
+      </table>
+    `;
+    document.execCommand("insertHTML", false, tableHTML);
+    setShowTableDialog(false);
   };
 
   return (
@@ -590,15 +564,15 @@ const TextEditor = () => {
               </div>
 
               {/* code */}
-              <div
-                className={`code ${selectedStyles.code ? "code-clicked" : ""}`}
-              >
-                <button
-                  onClick={handleCode}
-                  className={`border rounded-md px-3 py-1 delete font-semibold`}
-                >
-                  <IoCode />
-                </button>
+              <div>
+                <div className={`code ${isCodeClicked ? "code-clicked" : ""}`}>
+                  <button
+                    onClick={handleCode}
+                    className={`border rounded-md px-3 py-1 delete font-semibold`}
+                  >
+                    <IoCode />
+                  </button>
+                </div>
               </div>
 
               {/* direction: left center right */}
@@ -693,25 +667,17 @@ const TextEditor = () => {
                 </button>
               </div>
 
-              {/* Emoji */}
+              {/* Table */}
               <div>
                 <div>
-                  {/* Button to toggle EmojiPicker visibility */}
                   <button
-                    onClick={toggleEmojiPicker}
-                    className="border rounded-md px-3 py-1 font-semibold"
+                    className="p-2 border rounded-full"
+                    onClick={() => setShowTableDialog(!showTableDialog)}
                   >
-                    <MdEmojiEmotions />
+                    <FaTableCells />
                   </button>
                 </div>
               </div>
-
-              {/* EmojiPicker component */}
-              {showEmojiPicker && (
-                <div className="absolute bottom-20 left-0 z-10">
-                  <EmojiPicker onEmojiClick={handleEmojiSelect} />
-                </div>
-              )}
 
               {/*  Image */}
               <div>
@@ -801,6 +767,7 @@ const TextEditor = () => {
           </div>
 
           {/* Textarea */}
+
           <div className="w-full">
             <div
               ref={editorRef}
@@ -812,6 +779,7 @@ const TextEditor = () => {
               onPaste={(e) => handlePaste(e)}
               style={{ width: "100%" }}
             >
+              {/* image */}
               <div
                 className=""
                 contentEditable="true"
@@ -830,6 +798,31 @@ const TextEditor = () => {
                   </div>
                 )}
               </div>
+              {/* table */}
+              {showTableDialog && (
+                <div className="mt-4">
+                  <input
+                    type="number"
+                    placeholder="Number of rows"
+                    value={numRows}
+                    onChange={(e) => setNumRows(parseInt(e.target.value))}
+                    className="border p-2 mr-2"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Number of columns"
+                    value={numCols}
+                    onChange={(e) => setNumCols(parseInt(e.target.value))}
+                    className="border p-2 mr-2"
+                  />
+                  <button
+                    className="bg-blue-500 text-white px-4 py-2 rounded"
+                    onClick={insertTable}
+                  >
+                    Insert Table
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
