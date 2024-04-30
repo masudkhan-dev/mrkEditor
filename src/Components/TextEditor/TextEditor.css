@@ -1,0 +1,21 @@
+/* Add these styles to your CSS file */
+pre {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 14px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+pre::before {
+  content: "Terminal";
+  display: block;
+  background-color: #333333;
+  color: #ffffff;
+  padding: 5px 10px;
+  font-weight: bold;
+}
+
+pre code {
+  color: #00ff00;
+}
